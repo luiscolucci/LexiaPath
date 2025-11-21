@@ -1,0 +1,262 @@
+/* Reset básico e fontes */
+body {
+  margin: 0;
+  font-family: 'Verdana', 'Arial', sans-serif;
+  background-color: #fdf6e3; /* Creme suave */
+  color: #2c3e50;
+  line-height: 1.8;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center; /* Centraliza horizontalmente o wrapper */
+  align-items: center;     /* Centraliza verticalmente o wrapper */
+}
+
+/* Wrapper para garantir o centro mesmo com pouco conteúdo */
+.wrapper {
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 800px; /* Limita a largura para não ficar muito esticado */
+  text-align: center; /* Centraliza textos de títulos e labels */
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  font-size: 1.2rem;
+  color: #7f8c8d;
+}
+
+/* Área de Input */
+.input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+/* Estilo do botão de upload "escondido" e customizado */
+input[type="file"] {
+  display: none;
+}
+
+.file-upload-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.upload-btn {
+  background-color: #e67e22; /* Laranja para destacar do azul */
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.1s;
+}
+
+.upload-btn:hover {
+  background-color: #d35400;
+}
+
+.upload-hint {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+textarea {
+  width: 100%;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 2px solid #bdc3c7;
+  font-size: 1rem;
+  background-color: #fff;
+  font-family: inherit;
+  box-sizing: border-box; /* Garante que o padding não estoure a largura */
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.action-btn {
+  padding: 1rem 2rem;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: transform 0.1s, background-color 0.2s;
+  align-self: center; /* Centraliza o botão na coluna flex */
+  width: 100%;
+  max-width: 300px;
+}
+
+.action-btn:hover {
+  background-color: #2980b9;
+}
+
+.action-btn:active {
+  transform: scale(0.98);
+}
+
+.action-btn:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+
+/* Área de Resultado */
+.result-area {
+  background-color: #fff;
+  padding: 2.5rem;
+  border-radius: 15px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  text-align: left; /* O texto lido deve ser alinhado à esquerda para leitura */
+  font-size: 1.15rem;
+}
+
+/* Ajustes para markdown dentro do resultado */
+.result-area h1, .result-area h2, .result-area h3 {
+  margin-top: 1.5rem;
+  color: #2c3e50;
+}
+
+.result-area ul {
+  padding-left: 1.5rem;
+}
+
+.result-area li {
+  margin-bottom: 0.8rem;
+}
+
+/* --- CONTROLES DE ÁUDIO --- */
+.audio-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 1rem;
+}
+
+.speak-btn {
+  background-color: #27ae60; /* Verde educação */
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.speak-btn:hover {
+  background-color: #2ecc71;
+  transform: scale(1.05);
+}
+
+.speak-btn.speaking {
+  background-color: #e74c3c; /* Vermelho para parar */
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+/* --- ESTILIZAÇÃO DO CONTEÚDO DA AULA (PEDAGÓGICO) --- */
+
+/* Títulos H1 viram "Cabeçalhos de Seção" coloridos */
+.result-area h1 {
+  font-size: 1.4rem;
+  background-color: #f0f4f8;
+  padding: 0.8rem;
+  border-left: 5px solid #3498db;
+  border-radius: 0 8px 8px 0;
+  margin-top: 2rem;
+  color: #2c3e50;
+}
+
+/* A seção de "Desafio" (geralmente a última) ganha destaque */
+.result-area h1:last-of-type {
+  border-left-color: #9b59b6; /* Roxo para desafio */
+  background-color: #fbf4fc;
+}
+
+/* Listas (bullets) mais legíveis */
+.result-area ul {
+  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px dashed #bdc3c7;
+  border-radius: 8px;
+  padding: 1.5rem 1.5rem 1.5rem 2.5rem;
+}
+
+.result-area li {
+  margin-bottom: 0.8rem;
+  font-weight: 500;
+}
+
+/* Spoiler/Resposta Oculta */
+.result-area blockquote {
+  background-color: #e8f6f3;
+  border-left: 4px solid #1abc9c;
+  margin: 1rem 0;
+  padding: 1rem;
+  font-style: italic;
+  color: #16a085;
+}
+
+/* Espaçamento entre os botões de áudio */
+.audio-controls {
+  gap: 1rem; /* Separa os botões */
+}
+
+/* Botão de Resposta (Roxo) */
+.speak-btn.answer-btn {
+  background-color: #8e44ad; /* Roxo */
+}
+
+.speak-btn.answer-btn:hover {
+  background-color: #9b59b6;
+}
+
+.speak-btn.answer-btn.speaking {
+  background-color: #e74c3c; /* Vermelho quando fala */
+}
+
+### Como testar a "Mágica":
+1.  Envie um PDF ou texto.
+2.  Clique em **"🗣️ Ouvir a Aula"**.
+    * O sistema vai ler a preparação, a analogia, a visualização e a pergunta do desafio.
+    * Ele vai parar **antes** de dar a resposta e dizer: *"Tente responder à pergunta acima..."*
+3.  O aluno pensa na resposta.
+4.  Clique em **"🎓 Ler Resposta"**.
+    * O sistema vai ler apenas a conclusão: *"A resposta correta é: [Resposta]"*.
+
+Isso fecha o ciclo pedagógico perfeitamente! 🚀
+
