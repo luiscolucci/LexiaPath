@@ -10,9 +10,6 @@ services:
     env_file:
       - ./backend/.env  # Lê sua API Key daqui automaticamente
 
-#    environment:
-#      - GOOGLE_API_KEY=AIzaSyCrR2gazOUZoHO2ju_CwH91gkrBwIxPU9U
-
     volumes:
       - ./backend:/app  # (Opcional) Permite editar código sem reconstruir
     restart: always
