@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  # Serviço do Backend (Python)
+  backend:
+    build: ./backend
+    container_name: lexiapath-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env  # Lê sua API Key daqui automaticamente
+
+#    environment:
+#      - GOOGLE_API_KEY=AIzaSyCrR2gazOUZoHO2ju_CwH91gkrBwIxPU9U
+
+    volumes:
+      - ./backend:/app  # (Opcional) Permite editar código sem reconstruir
+    restart: always
+
+  # Serviço do Frontend (React + Nginx)
+  frontend:
+    build: ./frontend
+    container_name: lexiapath-frontend
+    ports:
+      - "5173:80" # Mapeia a porta 80 do Nginx para a 5173 do seu PC
+    depends_on:
+      - backend
+    restart: always

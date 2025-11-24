@@ -6,46 +6,88 @@ function App() {
   const [inputText, setInputText] = useState('')
   const [result, setResult] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isSpeaking, setIsSpeaking] = useState(false)
+  
+  // Controle dos botões de áudio
+  const [isSpeakingMain, setIsSpeakingMain] = useState(false)
+  const [isSpeakingAnswer, setIsSpeakingAnswer] = useState(false)
 
-  // Efeito para cancelar a fala se o componente for desmontado (fechar aba/atualizar)
+  // NOVO ESTADO: Controla se a resposta visual está visível ou não
+  const [showAnswer, setShowAnswer] = useState(false)
+
   useEffect(() => {
     return () => {
       window.speechSynthesis.cancel();
     };
   }, []);
 
-  // --- FUNÇÃO DE ÁUDIO (TTS) ---
-  const handleSpeak = () => {
-    if (!result) return;
+  // --- LÓGICA DE SEPARAÇÃO (ÁUDIO E TEXTO) ---
+  const getParts = (fullText) => {
+    if (!fullText) return { main: "", answer: "", hasHiddenAnswer: false };
 
-    // Se já estiver falando, cancela (funciona como Pause/Stop)
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
+    const spoilerMatch = fullText.match(/>!([\s\S]*?)!</);
+    
+    if (spoilerMatch) {
+      return {
+        // Texto principal: Substitui o spoiler por uma instrução visual simples
+        main: fullText.replace(/>![\s\S]*?!</, "\n\n> *Pense na resposta... depois clique no botão abaixo para conferir!*"),
+        answer: spoilerMatch[1].trim(),
+        hasHiddenAnswer: true
+      };
     }
+    return { main: fullText, answer: "", hasHiddenAnswer: false };
+  };
 
-    // Configura a voz do navegador
-    const utterance = new SpeechSynthesisUtterance(result);
-    utterance.lang = 'pt-BR'; // Força português do Brasil
-    utterance.rate = 1.1;     // Velocidade levemente mais rápida para fluidez
+  // --- ÁUDIO ---
+  const speakText = (text, activeStateSetter) => {
+    window.speechSynthesis.cancel();
+    setIsSpeakingMain(false);
+    setIsSpeakingAnswer(false);
+
+    if (!text) return;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.1;
     utterance.pitch = 1;
 
-    // Quando a leitura terminar, reseta o botão
-    utterance.onend = () => setIsSpeaking(false);
-    
-    // Inicia a fala
+    utterance.onend = () => activeStateSetter(false);
     window.speechSynthesis.speak(utterance);
-    setIsSpeaking(true);
+    activeStateSetter(true);
   }
 
-  // --- CHAMADA AO BACKEND (TEXTO) ---
+  const handleStop = () => {
+    window.speechSynthesis.cancel();
+    setIsSpeakingMain(false);
+    setIsSpeakingAnswer(false);
+  }
+
+  const handleSpeakMain = () => {
+    if (isSpeakingMain) { handleStop(); return; }
+    const parts = getParts(result);
+    // Para áudio, lemos a versão sem o texto do spoiler
+    speakText(parts.main, setIsSpeakingMain);
+  }
+
+  const handleSpeakAnswer = () => {
+    if (isSpeakingAnswer) { handleStop(); return; }
+    const parts = getParts(result);
+    if (parts.answer) {
+      speakText("A resposta correta é: " + parts.answer, setIsSpeakingAnswer);
+    }
+  }
+
+  // --- RESET DE ESTADOS ---
+  const resetStates = () => {
+    setResult('');
+    handleStop();
+    setShowAnswer(false); // Esconde a resposta sempre que gerar nova aula
+  }
+
+  // --- API ---
   const handleSimplify = async () => {
     if (!inputText) return;
-    
     setLoading(true);
-    setResult(''); // Limpa resultado anterior
+    resetStates();
     
     try {
       const response = await fetch('http://localhost:8000/simplify', {
@@ -53,23 +95,20 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ original_text: inputText })
       });
-      
       const data = await response.json();
       setResult(data.simplified_text);
     } catch (error) {
-      console.error("Erro ao conectar com a API", error);
-      setResult("Ocorreu um erro ao tentar gerar a aula. Verifique se o backend está rodando.");
+      console.error(error);
+      setResult("Erro na API.");
     }
     setLoading(false);
   }
 
-  // --- CHAMADA AO BACKEND (UPLOAD PDF) ---
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
     setLoading(true);
-    setResult(''); // Limpa resultado anterior
+    resetStates();
 
     const formData = new FormData();
     formData.append('file', file);
@@ -77,73 +116,100 @@ function App() {
     try {
       const response = await fetch('http://localhost:8000/upload-pdf', {
         method: 'POST',
-        body: formData, // O browser define o Content-Type multipart/form-data automaticamente
+        body: formData,
       });
-      
-      if (!response.ok) throw new Error('Erro no upload');
-      
+      if (!response.ok) throw new Error('Erro upload');
       const data = await response.json();
       setResult(data.simplified_text);
     } catch (error) {
       console.error(error);
-      setResult("Erro ao processar o PDF. Verifique se o arquivo é válido e contém texto selecionável.");
+      setResult("Erro ao ler PDF.");
     }
     setLoading(false);
   }
+
+  // Prepara as partes para renderização
+  const { main, answer, hasHiddenAnswer } = getParts(result);
 
   return (
     <div className="wrapper">
       <div className="container">
         <header>
           <h1>🧠 LexiaPath</h1>
-          <p>Sua plataforma de ensino adaptativo multisensorial.</p>
+          <p>Ensino estruturado e multisensorial.</p>
         </header>
 
         <main>
           <div className="input-area">
-            
-            {/* Área de Upload */}
             <div className="file-upload-wrapper">
-              <label htmlFor="pdf-upload" className="upload-btn">
-                📄 Escolher PDF
-              </label>
-              <input 
-                id="pdf-upload" 
-                type="file" 
-                accept=".pdf" 
-                onChange={handleFileUpload} 
-                disabled={loading}
-              />
-              <span className="upload-hint">ou cole o texto abaixo:</span>
+              <label htmlFor="pdf-upload" className="upload-btn">📄 Escolher PDF</label>
+              <input id="pdf-upload" type="file" accept=".pdf" onChange={handleFileUpload} disabled={loading}/>
+              <span className="upload-hint">ou cole o texto:</span>
             </div>
 
             <textarea 
-              placeholder="Cole o conteúdo difícil aqui..."
+              placeholder="Cole o conteúdo da aula aqui..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               rows={6}
             />
             
             <button className="action-btn" onClick={handleSimplify} disabled={loading}>
-              {loading ? 'Preparando a Aula...' : '✨ Gerar Aula Adaptada'}
+              {loading ? 'Preparando Aula...' : '✨ Gerar Aula Interativa'}
             </button>
           </div>
 
           {result && (
             <div className="result-area">
-              {/* Controles de Áudio */}
+              
+              {/* Botões de Áudio (Controle Geral) */}
               <div className="audio-controls">
                 <button 
-                  onClick={handleSpeak} 
-                  className={`speak-btn ${isSpeaking ? 'speaking' : ''}`}
-                  title="Ouvir o conteúdo gerado"
+                  onClick={handleSpeakMain} 
+                  className={`speak-btn ${isSpeakingMain ? 'speaking' : ''}`}
                 >
-                  {isSpeaking ? '⏹️ Parar Leitura' : '🗣️ Ouvir a Aula'}
+                  {isSpeakingMain ? '⏹️ Parar' : '🗣️ Ouvir Aula'}
                 </button>
+                
+                {/* O botão de Ouvir Resposta só aparece se o usuário já revelou visualmente a resposta */}
+                {hasHiddenAnswer && showAnswer && (
+                  <button 
+                    onClick={handleSpeakAnswer} 
+                    className={`speak-btn answer-btn ${isSpeakingAnswer ? 'speaking' : ''}`}
+                  >
+                    {isSpeakingAnswer ? '⏹️ Parar' : '🎓 Ouvir Resposta'}
+                  </button>
+                )}
               </div>
               
-              {/* Renderização do Markdown (Aula Estruturada) */}
-              <ReactMarkdown>{result}</ReactMarkdown>
+              {/* Texto Principal da Aula */}
+              <ReactMarkdown>{main}</ReactMarkdown>
+
+              {/* ÁREA DA RESPOSTA INTERATIVA */}
+              {hasHiddenAnswer && (
+                <div className="interactive-answer-section">
+                  {!showAnswer ? (
+                    <button 
+                      className="reveal-btn" 
+                      onClick={() => setShowAnswer(true)}
+                    >
+                      👁️ Exibir Resposta
+                    </button>
+                  ) : (
+                    <div className="answer-card fade-in">
+                      <h3>🎉 Resposta do Desafio:</h3>
+                      <p>{answer}</p>
+                      <button 
+                        className="hide-btn"
+                        onClick={() => setShowAnswer(false)}
+                      >
+                        Esconder
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
         </main>

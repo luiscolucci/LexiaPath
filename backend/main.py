@@ -90,7 +90,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     try:
         print(f"Recebendo arquivo: {file.filename}") # Log para debug
 
-        if not file.filename.endswith('.pdf'):
+        if not file.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Apenas arquivos .pdf são permitidos")
 
         content = await file.read()
