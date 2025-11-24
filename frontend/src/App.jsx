@@ -1,43 +1,60 @@
-import { useState, useEffect } from 'react'
-import ReactMarkdown from 'react-markdown'
-import './App.css'
+import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import "./App.css";
 
 function App() {
-  const [inputText, setInputText] = useState('')
-  const [result, setResult] = useState('')
-  const [loading, setLoading] = useState(false)
-  
-  // Controle dos botões de áudio
-  const [isSpeakingMain, setIsSpeakingMain] = useState(false)
-  const [isSpeakingAnswer, setIsSpeakingAnswer] = useState(false)
+  // --- ESTADOS DE DADOS ---
+  const [inputText, setInputText] = useState("");
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // NOVO ESTADO: Controla se a resposta visual está visível ou não
-  const [showAnswer, setShowAnswer] = useState(false)
+  // --- ESTADOS DE ACESSIBILIDADE ---
+  const [fontSize, setFontSize] = useState(18); // Tamanho padrão
+  const [useLexend, setUseLexend] = useState(false); // Fonte especial
+  const [highContrast, setHighContrast] = useState(false); // Modo escuro
 
+  // --- ESTADOS DE ÁUDIO & INTERATIVIDADE ---
+  const [isSpeakingMain, setIsSpeakingMain] = useState(false);
+  const [isSpeakingAnswer, setIsSpeakingAnswer] = useState(false);
+  const [showAnswer, setShowAnswer] = useState(false); // Controla o spoiler
+
+  // Efeito: Aplica classe de alto contraste no corpo do site
   useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
+    if (highContrast) {
+      document.body.classList.add("high-contrast");
+    } else {
+      document.body.classList.remove("high-contrast");
+    }
+  }, [highContrast]);
+
+  // Efeito: Para o áudio se sair da página
+  useEffect(() => {
+    return () => window.speechSynthesis.cancel();
   }, []);
 
-  // --- LÓGICA DE SEPARAÇÃO (ÁUDIO E TEXTO) ---
+  // --- LÓGICA DE SEPARAÇÃO DO TEXTO (SPOILER) ---
   const getParts = (fullText) => {
     if (!fullText) return { main: "", answer: "", hasHiddenAnswer: false };
 
+    // Procura o padrão >! Texto !<
     const spoilerMatch = fullText.match(/>!([\s\S]*?)!</);
-    
+
     if (spoilerMatch) {
       return {
-        // Texto principal: Substitui o spoiler por uma instrução visual simples
-        main: fullText.replace(/>![\s\S]*?!</, "\n\n> *Pense na resposta... depois clique no botão abaixo para conferir!*"),
+        // Remove o spoiler do texto principal e coloca um aviso
+        main: fullText.replace(
+          />![\s\S]*?!</,
+          "\n\n> *🛑 Pense na resposta... depois clique no botão abaixo para conferir!*"
+        ),
+        // Guarda a resposta para mostrar no cartão depois
         answer: spoilerMatch[1].trim(),
-        hasHiddenAnswer: true
+        hasHiddenAnswer: true,
       };
     }
     return { main: fullText, answer: "", hasHiddenAnswer: false };
   };
 
-  // --- ÁUDIO ---
+  // --- GERENCIADOR DE ÁUDIO ---
   const speakText = (text, activeStateSetter) => {
     window.speechSynthesis.cancel();
     setIsSpeakingMain(false);
@@ -46,54 +63,57 @@ function App() {
     if (!text) return;
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'pt-BR';
+    utterance.lang = "pt-BR";
     utterance.rate = 1.1;
     utterance.pitch = 1;
 
     utterance.onend = () => activeStateSetter(false);
     window.speechSynthesis.speak(utterance);
     activeStateSetter(true);
-  }
+  };
 
   const handleStop = () => {
     window.speechSynthesis.cancel();
     setIsSpeakingMain(false);
     setIsSpeakingAnswer(false);
-  }
+  };
 
   const handleSpeakMain = () => {
-    if (isSpeakingMain) { handleStop(); return; }
+    if (isSpeakingMain) {
+      handleStop();
+      return;
+    }
     const parts = getParts(result);
-    // Para áudio, lemos a versão sem o texto do spoiler
     speakText(parts.main, setIsSpeakingMain);
-  }
+  };
 
   const handleSpeakAnswer = () => {
-    if (isSpeakingAnswer) { handleStop(); return; }
+    if (isSpeakingAnswer) {
+      handleStop();
+      return;
+    }
     const parts = getParts(result);
     if (parts.answer) {
       speakText("A resposta correta é: " + parts.answer, setIsSpeakingAnswer);
     }
-  }
+  };
 
-  // --- RESET DE ESTADOS ---
   const resetStates = () => {
-    setResult('');
+    setResult("");
     handleStop();
-    setShowAnswer(false); // Esconde a resposta sempre que gerar nova aula
-  }
+    setShowAnswer(false); // Esconde a resposta ao gerar novo conteúdo
+  };
 
-  // --- API ---
+  // --- CONEXÃO COM API ---
   const handleSimplify = async () => {
     if (!inputText) return;
     setLoading(true);
     resetStates();
-    
     try {
-      const response = await fetch('http://localhost:8000/simplify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ original_text: inputText })
+      const response = await fetch("http://localhost:8000/simplify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ original_text: inputText }),
       });
       const data = await response.json();
       setResult(data.simplified_text);
@@ -102,23 +122,21 @@ function App() {
       setResult("Erro na API.");
     }
     setLoading(false);
-  }
+  };
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
     setLoading(true);
     resetStates();
-
     const formData = new FormData();
-    formData.append('file', file);
-
+    formData.append("file", file);
     try {
-      const response = await fetch('http://localhost:8000/upload-pdf', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8000/upload-pdf", {
+        method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error('Erro upload');
+      if (!response.ok) throw new Error("Erro upload");
       const data = await response.json();
       setResult(data.simplified_text);
     } catch (error) {
@@ -126,13 +144,13 @@ function App() {
       setResult("Erro ao ler PDF.");
     }
     setLoading(false);
-  }
+  };
 
-  // Prepara as partes para renderização
+  // Prepara os textos para renderizar
   const { main, answer, hasHiddenAnswer } = getParts(result);
 
   return (
-    <div className="wrapper">
+    <div className={`wrapper ${useLexend ? "font-lexend" : ""}`}>
       <div className="container">
         <header>
           <h1>🧠 LexiaPath</h1>
@@ -142,80 +160,132 @@ function App() {
         <main>
           <div className="input-area">
             <div className="file-upload-wrapper">
-              <label htmlFor="pdf-upload" className="upload-btn">📄 Escolher PDF</label>
-              <input id="pdf-upload" type="file" accept=".pdf" onChange={handleFileUpload} disabled={loading}/>
+              <label htmlFor="pdf-upload" className="upload-btn">
+                📄 Escolher PDF
+              </label>
+              <input
+                id="pdf-upload"
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                disabled={loading}
+              />
               <span className="upload-hint">ou cole o texto:</span>
             </div>
-
-            <textarea 
-              placeholder="Cole o conteúdo da aula aqui..."
+            <textarea
+              placeholder="Cole o conteúdo..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               rows={6}
             />
-            
-            <button className="action-btn" onClick={handleSimplify} disabled={loading}>
-              {loading ? 'Preparando Aula...' : '✨ Gerar Aula Interativa'}
+            <button
+              className="action-btn"
+              onClick={handleSimplify}
+              disabled={loading}
+            >
+              {loading ? "Preparando Aula..." : "✨ Gerar Aula Interativa"}
             </button>
           </div>
 
           {result && (
-            <div className="result-area">
-              
-              {/* Botões de Áudio (Controle Geral) */}
-              <div className="audio-controls">
-                <button 
-                  onClick={handleSpeakMain} 
-                  className={`speak-btn ${isSpeakingMain ? 'speaking' : ''}`}
-                >
-                  {isSpeakingMain ? '⏹️ Parar' : '🗣️ Ouvir Aula'}
-                </button>
-                
-                {/* O botão de Ouvir Resposta só aparece se o usuário já revelou visualmente a resposta */}
-                {hasHiddenAnswer && showAnswer && (
-                  <button 
-                    onClick={handleSpeakAnswer} 
-                    className={`speak-btn answer-btn ${isSpeakingAnswer ? 'speaking' : ''}`}
+            <div className="result-container">
+              {/* 1. BARRA DE FERRAMENTAS DE ACESSIBILIDADE */}
+              <div className="accessibility-bar">
+                <div className="tool-group">
+                  <button
+                    className="tool-btn"
+                    onClick={() => setFontSize((s) => Math.max(14, s - 2))}
+                    title="Diminuir Texto"
                   >
-                    {isSpeakingAnswer ? '⏹️ Parar' : '🎓 Ouvir Resposta'}
+                    A-
                   </button>
-                )}
+                  <button
+                    className="tool-btn"
+                    onClick={() => setFontSize((s) => Math.min(32, s + 2))}
+                    title="Aumentar Texto"
+                  >
+                    A+
+                  </button>
+                </div>
+                <div className="tool-group">
+                  <button
+                    className={`tool-btn ${useLexend ? "active" : ""}`}
+                    onClick={() => setUseLexend(!useLexend)}
+                  >
+                    {useLexend ? "Fonte: Lexend" : "Fonte: Padrão"}
+                  </button>
+                </div>
+                <div className="tool-group">
+                  <button
+                    className={`tool-btn ${highContrast ? "active" : ""}`}
+                    onClick={() => setHighContrast(!highContrast)}
+                  >
+                    {highContrast ? "☀️ Dia" : "🌙 Noite"}
+                  </button>
+                </div>
               </div>
-              
-              {/* Texto Principal da Aula */}
-              <ReactMarkdown>{main}</ReactMarkdown>
 
-              {/* ÁREA DA RESPOSTA INTERATIVA */}
-              {hasHiddenAnswer && (
-                <div className="interactive-answer-section">
-                  {!showAnswer ? (
-                    <button 
-                      className="reveal-btn" 
-                      onClick={() => setShowAnswer(true)}
+              {/* Área de Resultado Dinâmica */}
+              <div
+                className="result-area"
+                style={{ fontSize: `${fontSize}px` }}
+              >
+                {/* 2. CONTROLES DE ÁUDIO */}
+                <div className="audio-controls">
+                  <button
+                    onClick={handleSpeakMain}
+                    className={`speak-btn ${isSpeakingMain ? "speaking" : ""}`}
+                  >
+                    {isSpeakingMain ? "⏹️ Parar" : "🗣️ Ouvir Aula"}
+                  </button>
+
+                  {/* Botão de ouvir resposta só aparece se ela já foi revelada */}
+                  {hasHiddenAnswer && showAnswer && (
+                    <button
+                      onClick={handleSpeakAnswer}
+                      className={`speak-btn answer-btn ${
+                        isSpeakingAnswer ? "speaking" : ""
+                      }`}
                     >
-                      👁️ Exibir Resposta
+                      {isSpeakingAnswer ? "⏹️ Parar" : "🎓 Ouvir Resposta"}
                     </button>
-                  ) : (
-                    <div className="answer-card fade-in">
-                      <h3>🎉 Resposta do Desafio:</h3>
-                      <p>{answer}</p>
-                      <button 
-                        className="hide-btn"
-                        onClick={() => setShowAnswer(false)}
-                      >
-                        Esconder
-                      </button>
-                    </div>
                   )}
                 </div>
-              )}
 
+                {/* 3. TEXTO DA AULA */}
+                <ReactMarkdown>{main}</ReactMarkdown>
+
+                {/* 4. SEÇÃO DE RESPOSTA INTERATIVA (SPOILER) */}
+                {hasHiddenAnswer && (
+                  <div className="interactive-answer-section">
+                    {!showAnswer ? (
+                      <button
+                        className="reveal-btn"
+                        onClick={() => setShowAnswer(true)}
+                      >
+                        👁️ Exibir Resposta
+                      </button>
+                    ) : (
+                      <div className="answer-card fade-in">
+                        <h3>🎉 Resposta do Desafio:</h3>
+                        <p>{answer}</p>
+                        <button
+                          className="hide-btn"
+                          onClick={() => setShowAnswer(false)}
+                        >
+                          Esconder novamente
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </main>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
